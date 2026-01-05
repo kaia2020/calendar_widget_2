@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Events Calendar</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      display: flex;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .calendar {
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .calendar-header {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border-radius: 8px;
+      cursor: default;
+    }
+
+    .day.has-event {
+      background: #eef2ff;
+      cursor: pointer;
+    }
+
+    .day.has-event:focus,
+    .day.has-event:hover {
+      background: #dbeafe;
+      outline: 2px solid #6366f1;
+    }
+
+    .event-dot {
+      width: 6px;
+      height: 6px;
+      background: #6366f1;
+      border-radius: 50%;
+      position: absolute;
+      bottom: 6px;
+    }
+
+    .day[tabindex="0"] {
+      outline: none;
+    }
+
+    @media (max-width: 480px) {
+      .calendar {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="calendar" role="grid" aria-label="Event calendar">
+    <div class="calendar-header" id="monthLabel"></div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <script>
+    /* =========================
+       EVENT DATA (SCALABLE)
+       ========================= */
+
+    const events = [
+      {
+        id: "full-moon",
+        date: "2026-01-12",
+        title: "Full Moon Gathering",
+        time: "7:00 PM",
+        description: "A guided meditation and intention-setting circle.",
+        url: "event.html"
+      },
+      {
+        id: "workshop",
+        date: "2026-01-18",
+        title: "Candle Making Workshop",
+        time: "2:00 PM",
+        description: "Hands-on workshop creating clean luxury candles.",
+        url: "event.html"
+      }
+    ];
+
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+
+    const grid = document.getElementById("calendarGrid");
+    const label = document.getElementById("monthLabel");
+
+    label.textContent = today.toLocaleDateString(undefined, {
+      month: "long",
+      year: "numeric"
+    });
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const event = events.find(e => e.date === dateStr);
+
+      const cell = document.createElement("div");
+      cell.className = "day";
+      cell.textContent = day;
+      cell.setAttribute("role", "gridcell");
+
+      if (event) {
+        cell.classList.add("has-event");
+        cell.setAttribute("tabindex", "0");
+        cell.setAttribute("aria-label", `${event.title} on ${event.date}`);
+        cell.title = event.title;
+
+        const dot = document.createElement("span");
+        dot.className = "event-dot";
+        cell.appendChild(dot);
+
+        cell.addEventListener("click", () => {
+          window.location.href = `${event.url}?id=${event.id}`;
+        });
+
+        cell.addEventListener("keydown", e => {
+          if (e.key === "Enter") cell.click();
+        });
+      }
+
+      grid.appendChild(cell);
+    }
+  </script>
+</body>
+</html>
