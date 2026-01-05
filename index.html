@@ -39,4 +39,266 @@
   }
 
   .month-btn:hover,
-  .mo
+  .month-btn:focus {
+    color: #025f2a;
+  }
+
+  /* LEGEND */
+  .calendar-legend {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #027934;
+    margin-bottom: 0.75rem;
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    background: #97c93c;
+    border-radius: 50%;
+  }
+
+  /* GRID */
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+
+  .day {
+    aspect-ratio: 1;
+    background: #f7fbf6;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    font-weight: 500;
+  }
+
+  .day.has-event {
+    background: #eef7ea;
+    cursor: pointer;
+  }
+
+  .day.has-event:hover,
+  .day.has-event:focus {
+    background: #e1f0db;
+    outline: 2px solid #027934;
+    outline-offset: 2px;
+  }
+
+  .event-dot {
+    width: 7px;
+    height: 7px;
+    background: #97c93c;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 6px;
+  }
+
+  /* MODAL */
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+  }
+
+  .modal-content {
+    background: #ffffff;
+    padding: 1.25rem;
+    border-radius: 10px;
+    max-width: 420px;
+    width: 90%;
+  }
+
+  .modal h2 {
+    margin-top: 0;
+    color: #027934;
+  }
+
+  .modal-close {
+    text-align: right;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: #027934;
+  }
+
+  .add-to-calendar {
+    display: inline-block;
+    margin-top: 0.75rem;
+    padding: 0.6rem 1rem;
+    background: #027934;
+    color: #ffffff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .add-to-calendar.secondary {
+    background: #97c93c;
+    color: #1f2933;
+    margin-left: 0.5rem;
+  }
+</style>
+
+<div class="calendar">
+  <div class="calendar-header-wrapper">
+    <button class="month-btn" id="prevMonth" aria-label="Previous month">‹</button>
+    <div class="calendar-header" id="monthLabel"></div>
+    <button class="month-btn" id="nextMonth" aria-label="Next month">›</button>
+  </div>
+
+  <div class="calendar-legend">
+    <span class="legend-dot"></span>
+    <span>Community & Store Events</span>
+  </div>
+
+  <div class="calendar-grid" id="calendarGrid"></div>
+</div>
+
+<!-- EVENT MODAL -->
+<div class="modal" id="eventModal" aria-hidden="true">
+  <div class="modal-content">
+    <div class="modal-close" onclick="closeModal()">Close ✕</div>
+    <h2 id="eventTitle"></h2>
+    <p id="eventMeta"></p>
+    <p id="eventDescription"></p>
+    <div id="calendarButtons"></div>
+  </div>
+</div>
+
+<script>
+  const CALENDAR_ID = "YOUR_GOOGLE_CALENDAR_ID@group.calendar.google.com";
+  const API_KEY = "YOUR_GOOGLE_API_KEY";
+
+  let currentDate = new Date();
+  let currentYear = currentDate.getFullYear();
+  let currentMonth = currentDate.getMonth();
+
+  const monthLabel = document.getElementById("monthLabel");
+  const grid = document.getElementById("calendarGrid");
+  const events = [];
+
+  fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${CALENDAR_ID}/events?key=${API_KEY}&singleEvents=true&orderBy=startTime`
+  )
+    .then(res => res.json())
+    .then(data => {
+      data.items.forEach(item => {
+        const start = item.start.dateTime || item.start.date;
+        events.push({
+          id: item.id,
+          date: start.split("T")[0],
+          title: item.summary,
+          description: item.description || "More details coming soon.",
+          startTime: item.start.dateTime || `${start}T12:00`
+        });
+      });
+      renderCalendar();
+    });
+
+  function renderCalendar() {
+    grid.innerHTML = "";
+
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+    monthLabel.textContent = new Date(currentYear, currentMonth).toLocaleDateString(
+      undefined,
+      { month: "long", year: "numeric" }
+    );
+
+    for (let i = 0; i < firstDay; i++) {
+      grid.appendChild(document.createElement("div"));
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+      const event = events.find(e => e.date === dateStr);
+
+      const cell = document.createElement("div");
+      cell.className = "day";
+      cell.textContent = day;
+
+      if (event) {
+        cell.classList.add("has-event");
+        cell.appendChild(document.createElement("span")).className = "event-dot";
+        cell.onclick = () => openModal(event);
+      }
+
+      grid.appendChild(cell);
+    }
+  }
+
+  document.getElementById("prevMonth").onclick = () => {
+    currentMonth--;
+    if (currentMonth < 0) {
+      currentMonth = 11;
+      currentYear--;
+    }
+    renderCalendar();
+  };
+
+  document.getElementById("nextMonth").onclick = () => {
+    currentMonth++;
+    if (currentMonth > 11) {
+      currentMonth = 0;
+      currentYear++;
+    }
+    renderCalendar();
+  };
+
+  function openModal(event) {
+    document.getElementById("eventTitle").textContent = event.title;
+    document.getElementById("eventMeta").textContent = event.date;
+    document.getElementById("eventDescription").textContent = event.description;
+
+    const start = new Date(event.startTime);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const format = d => d.toISOString().replace(/-|:|\.\d+/g, "");
+
+    const googleUrl =
+      `https://calendar.google.com/calendar/render?action=TEMPLATE` +
+      `&text=${encodeURIComponent(event.title)}` +
+      `&dates=${format(start)}/${format(end)}` +
+      `&details=${encodeURIComponent(event.description)}` +
+      `&location=Hudson Grocery Co-op`;
+
+    const ics = `
+BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:${event.title}
+DESCRIPTION:${event.description}
+LOCATION:Hudson Grocery Co-op
+DTSTART:${format(start)}
+DTEND:${format(end)}
+END:VEVENT
+END:VCALENDAR`.trim();
+
+    const blob = new Blob([ics], { type: "text/calendar" });
+    const icsUrl = URL.createObjectURL(blob);
+
+    document.getElementById("calendarButtons").innerHTML = `
+      <a class="add-to-calendar" href="${googleUrl}" target="_blank">Add to Google Calendar</a>
+      <a class="add-to-calendar secondary" href="${icsUrl}" download="${event.title}.ics">
+        Add to Apple / Outlook
+      </a>
+    `;
+
+    document.getElementById("eventModal").style.display = "flex";
+  }
+
+  function closeModal() {
+    document.getElementById("eventModal").style.display = "none";
+  }
+</script>
